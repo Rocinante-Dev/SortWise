@@ -24,7 +24,7 @@
 <body>
     <script>
         // Version stub for error handling
-        const APP_VERSION_STUB = "v1.1.2";
+        const APP_VERSION_STUB = "v1.2.0";
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             alert("Global Error (" + APP_VERSION_STUB + "): " + msg + "\nURL: " + url + "\nLine: " + lineNo);
             return false;
@@ -77,34 +77,19 @@
                     <video id="camera-feed" autoplay playsinline muted></video>
                     <canvas id="camera-canvas" hidden></canvas>
                     <div class="camera-overlay">
-                        <p class="hint-text">Point at an item to recycle</p>
-                        <p class="app-version version-text">v1.0.0</p>
+                        <button id="back-btn" class="text-btn">← Back</button>
+                        <h2>Analysis</h2>
                     </div>
-                </div>
-                <div class="controls">
-                    <button id="capture-btn" class="capture-btn" aria-label="Take Picture"></button>
-                    <input type="file" id="file-input" accept="image/*" hidden>
-                    <button id="upload-btn" class="icon-btn secondary-action" aria-label="Upload Image"
-                        style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); margin-left: 1rem;">📁</button>
-                </div>
-            </section>
-
-            <!-- Results View -->
-            <section id="view-result" class="view">
-                <div class="result-header">
-                    <button id="back-btn" class="text-btn">← Back</button>
-                    <h2>Analysis</h2>
-                </div>
-                <div class="captured-image-container">
-                    <img id="captured-image" alt="Captured item" />
-                </div>
-                <div id="loading-indicator" class="hidden">
-                    <div class="spinner"></div>
-                    <p>Analyzing with Gemini...</p>
-                </div>
-                <div id="analysis-content" class="markdown-body"></div>
-                <p class="disclaimer-text">⚠️ <strong>Note:</strong> Advice is AI-generated and may be inaccurate.
-                    Always verify with your local recycling authority.</p>
+                    <div class="captured-image-container">
+                        <img id="captured-image" alt="Captured item" />
+                    </div>
+                    <div id="loading-indicator" class="hidden">
+                        <div class="spinner"></div>
+                        <p>Analyzing with Gemini...</p>
+                    </div>
+                    <div id="analysis-content" class="markdown-body"></div>
+                    <p class="disclaimer-text">⚠️ <strong>Note:</strong> Advice is AI-generated and may be inaccurate.
+                        Always verify with your local recycling authority.</p>
             </section>
 
             <!-- Settings View -->

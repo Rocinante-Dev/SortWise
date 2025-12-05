@@ -5,12 +5,10 @@ console.log(`App.js module loaded. Version: ${CONFIG.APP_VERSION}`);
 
 // State
 const state = {
-    // If local key exists, use it. Otherwise use default/demo key.
     apiKey: localStorage.getItem('gemini_api_key') || CONFIG.DEFAULT_API_KEY || '',
     model: localStorage.getItem('gemini_model') || CONFIG.DEFAULT_MODEL,
     currentView: 'view-camera',
     stream: null,
-    // Demo mode is active if we are using the default key AND there is no local key override
     get isDemoMode() {
         return !localStorage.getItem('gemini_api_key') && this.apiKey === CONFIG.DEFAULT_API_KEY && !!CONFIG.DEFAULT_API_KEY;
     }
@@ -36,7 +34,6 @@ function switchView(viewName) {
             stopCamera();
         }
 
-        // Refresh UI state when switching views
         updateUIState();
     } else {
         console.error(`View not found: ${viewName}`);
@@ -47,18 +44,15 @@ function switchView(viewName) {
 async function startCamera() {
     console.log("Attempting to start camera...");
     try {
-        if (state.stream) {
-            console.log("Stream already exists");
-            return; // Already running
-        }
+        if (state.stream) return;
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Camera API not supported in this browser");
+            throw new Error("Camera API not supported");
         }
 
         const constraints = {
             video: {
-                facingMode: 'environment', // Use back camera on mobile
+                facingMode: 'environment',
                 width: { ideal: 1280 },
                 height: { ideal: 720 }
             }
@@ -66,15 +60,13 @@ async function startCamera() {
 
         state.stream = await navigator.mediaDevices.getUserMedia(constraints);
         elements.video.srcObject = state.stream;
-        console.log("Camera started successfully");
     } catch (err) {
         console.error("Error accessing camera:", err);
-        alert(`Could not access camera: ${err.message}. Please ensure you have granted permissions and are using HTTPS.`);
+        alert(`Camera Error: ${err.message}`);
     }
 }
 
 function stopCamera() {
-    console.log("Stopping camera...");
     if (state.stream) {
         state.stream.getTracks().forEach(track => track.stop());
         state.stream = null;
@@ -82,33 +74,25 @@ function stopCamera() {
 }
 
 function captureImage() {
-    console.log("Capturing image...");
     const context = elements.canvas.getContext('2d');
     elements.canvas.width = elements.video.videoWidth;
     elements.canvas.height = elements.video.videoHeight;
     context.drawImage(elements.video, 0, 0, elements.canvas.width, elements.canvas.height);
-
     const imageDataUrl = elements.canvas.toDataURL('image/jpeg', 0.8);
     elements.capturedImage.src = imageDataUrl;
-
     return imageDataUrl;
 }
 
 // Location Logic
 function getLocation() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         if (!navigator.geolocation) {
             resolve("Location not supported");
             return;
         }
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                resolve(`${position.coords.latitude}, ${position.coords.longitude}`);
-            },
-            (error) => {
-                console.warn("Location error:", error);
-                resolve("Unknown Location");
-            }
+            (position) => resolve(`${position.coords.latitude}, ${position.coords.longitude}`),
+            (error) => resolve("Unknown Location")
         );
     });
 }
@@ -126,7 +110,6 @@ async function fetchAvailableModels() {
                 m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")
             );
 
-            // Sort: Prefer 'pro' then 'flash' then others
             contentModels.sort((a, b) => {
                 const aName = a.displayName || a.name;
                 const bName = b.displayName || b.name;
@@ -140,19 +123,13 @@ async function fetchAvailableModels() {
                 const name = m.displayName || id;
                 return `<option value="${id}" ${state.model === id ? 'selected' : ''}>${name} (${id})</option>`;
             }).join('');
-
-            // Ensure selection tracks state if current invalid
-            if (contentModels.length > 0 && !contentModels.find(m => m.name.replace('models/', '') === state.model)) {
-                console.warn(`Stored model ${state.model} not found in available list.`);
-            }
         }
     } catch (e) {
         console.error("Failed to fetch models:", e);
     }
 }
 
-// Gemini Logic
-async function analyzeImage(base64Image) {
+async function analyzeItem(input) {
     if (!state.apiKey) {
         alert("Please set your Gemini API Key in settings first.");
         switchView('view-settings');
@@ -161,75 +138,80 @@ async function analyzeImage(base64Image) {
 
     elements.loadingIndicator.classList.remove('hidden');
     elements.analysisContent.innerHTML = '';
+    const dateStr = new Date().toLocaleDateString();
 
     try {
         const genAI = new GoogleGenerativeAI(state.apiKey);
         let model = genAI.getGenerativeModel({ model: state.model });
-
         const location = await getLocation();
+        let prompt;
+        let contentParts;
 
-        const base64Data = base64Image.split(',')[1];
+        if (input.image) {
+            const base64Data = input.image.split(',')[1];
+            prompt = `
+            Identify this item and provide recycling instructions for location coordinates: ${location}.
+            Current Date: ${dateStr}.
 
-        const prompt = `
-        Identify this item and provide recycling instructions for location coordinates: ${location}.
+            STRICT RESPONSE GUIDELINES:
+            1. LOCATION: Deduce specific City/Municipality.
+            2. TEMPORAL AWARENESS: Be aware of current date (${dateStr}) and upcoming provider changes (e.g. 2025/2026 transitions).
+            3. ACCURACY: Define bin colors explicitly (e.g. "Black Bin (Garbage)"). Check for rules like "screw caps back on".
+            4. VERIFICATION: Provide a clickable Google Search link.
 
-        STRICT RESPONSE GUIDELINES:
-        1. LOCATION: First, deduce the likely City/Municipality from the provided coordinates. State this clearly.
-        2. DIRECTNESS: Start with the item name. No filler.
-        3. ACCURACY: 
-           - If the item is a **plastic cap**, the modern standard (in many places like US/Canada/UK) is often to **screw it back onto the empty bottle** so it doesn't get lost in sorting. CHECK local rules for this specific location.
-           - If suggesting a "Black Bin" or "Blue Bin", specify what that bin is for (e.g., "Black Bin (Garbage)" or "Blue Bin (Containers)") to avoid confusion, as color codes vary wildly.
-        4. VERIFICATION: You MUST provide a **clickable link** for the user to verify. 
-           - If you know the official municipal site, link it.
-           - Otherwise, generate a Google Search URL: https://www.google.com/search?q=recycling+instructions+for+${location}+[item_name]
+            Format your response in Markdown:
+            ### [Item Name]
+            **Detected Location:** [City, Region]
+            **Recyclable:** [Yes/No/Check Local]
+            **Instructions:** [Step-by-step guide]
+            **Verify:** [Link]
+            `;
+            contentParts = [prompt, { inlineData: { data: base64Data, mimeType: "image/jpeg" } }];
+        } else if (input.text) {
+            prompt = `
+            Provide recycling instructions for item: "${input.text}".
+            User location coordinates: ${location}.
+            Current Date: ${dateStr}.
 
-        Format your response in Markdown:
-        ### [Item Name]
-        **Detected Location:** [City, Region]
-        **Recyclable:** [Yes/No/Check Local]
-        **Instructions:** [Concise, step-by-step disposal guide. Be specific about bin colors AND their purpose.]
-        **Verify:** [Link to Official Site or Google Search]
-        `;
+            STRICT RESPONSE GUIDELINES:
+            1. LOCATION: Deduce specific City/Municipality.
+            2. TEMPORAL AWARENESS: Be aware of current date (${dateStr}) and changes (e.g. 2026 contracts).
+            3. ACCURACY: Define bin colors explicitly.
+            4. VERIFICATION: Provide a clickable Google Search link.
 
-        const imagePart = {
-            inlineData: {
-                data: base64Data,
-                mimeType: "image/jpeg",
-            },
-        };
+            Format your response in Markdown:
+            ### ${input.text}
+            **Detected Location:** [City, Region]
+            **Recyclable:** [Yes/No/Check Local]
+            **Instructions:** [Step-by-step guide]
+            **Verify:** [Link]
+            `;
+            contentParts = [prompt];
+        }
 
         try {
             console.log(`Attempting generation with ${state.model}...`);
-            const result = await model.generateContent([prompt, imagePart]);
+            const result = await model.generateContent(contentParts);
             const response = await result.response;
-            const text = response.text();
-            renderMarkdown(text);
+            renderMarkdown(response.text());
         } catch (error) {
             console.warn(`Error with ${state.model}:`, error);
-
-            // Check for Quota Exceeded (429) or Service Unavailable (503)
             const isQuotaError = error.message.includes('429') || error.message.includes('Resource has been exhausted');
 
             if (isQuotaError && state.model !== CONFIG.FALLBACK_MODEL) {
-                console.log(`Switching to fallback model: ${CONFIG.FALLBACK_MODEL}`);
-                elements.analysisContent.innerHTML = `<p style="color: var(--warning-color, orange)">NOTE: High traffic detected. Switched to faster model (${CONFIG.FALLBACK_MODEL}).</p>`;
-
+                console.log(`Switching to fallback: ${CONFIG.FALLBACK_MODEL}`);
+                elements.analysisContent.innerHTML = `<p style="color: var(--warning-color, orange)">Switched to faster model (${CONFIG.FALLBACK_MODEL}) due to traffic.</p>`;
                 model = genAI.getGenerativeModel({ model: CONFIG.FALLBACK_MODEL });
-                const result = await model.generateContent([prompt, imagePart]);
+                const result = await model.generateContent(contentParts);
                 const response = await result.response;
-                const text = response.text();
-
-                // Prepend note about fallback
-                const note = `> [!NOTE]\n> Used fallback model due to high traffic.\n\n`;
-                renderMarkdown(note + text);
+                renderMarkdown(`> [!NOTE]\n> Used fallback model.\n\n` + response.text());
             } else {
-                throw error; // Re-throw if not quota error or already on fallback
+                throw error;
             }
         }
-
     } catch (error) {
         console.error("Gemini Error:", error);
-        elements.analysisContent.innerHTML = `<p style="color: var(--danger-color)">Error analyzing image: ${error.message}</p>`;
+        elements.analysisContent.innerHTML = `<p style="color: var(--danger-color)">Error: ${error.message}</p>`;
     } finally {
         elements.loadingIndicator.classList.add('hidden');
     }
@@ -243,224 +225,151 @@ function renderMarkdown(text) {
         .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
         .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>')
         .replace(/\n/gim, '<br>');
-
     elements.analysisContent.innerHTML = html;
 }
 
-// UI Updates
 function updateUIState() {
-    // Update Version Displays
-    document.querySelectorAll('.app-version').forEach(el => {
-        el.textContent = CONFIG.APP_VERSION;
-    });
-
-    // Update Demo Mode Indicators
+    document.querySelectorAll('.app-version').forEach(el => el.textContent = CONFIG.APP_VERSION);
     const isDemo = state.isDemoMode;
     document.body.classList.toggle('demo-mode', isDemo);
 
-    // Update Settings UI
     if (elements.apiKeyInput) {
         if (isDemo) {
             elements.apiKeyInput.placeholder = "Using Demo Key (Active)";
-            elements.apiKeyInput.value = ""; // Don't show the actual demo key
+            elements.apiKeyInput.value = "";
         } else {
             elements.apiKeyInput.placeholder = "Paste your API key here";
-            // Only show value if it's the user's custom key
             elements.apiKeyInput.value = state.apiKey === CONFIG.DEFAULT_API_KEY ? "" : state.apiKey;
         }
     }
+    if (elements.demoBadge) elements.demoBadge.hidden = !isDemo;
+    if (elements.resetKeyBtn) elements.resetKeyBtn.hidden = isDemo;
+}
 
-    if (elements.demoBadge) {
-        elements.demoBadge.hidden = !isDemo;
+async function init() {
+    console.log("Initializing App...");
+    views = {
+        intro: document.getElementById('view-intro'),
+        camera: document.getElementById('view-camera'),
+        result: document.getElementById('view-result'),
+        settings: document.getElementById('view-settings'),
+        manual: document.getElementById('view-manual')
+    };
+
+    elements = {
+        video: document.getElementById('camera-feed'),
+        canvas: document.getElementById('camera-canvas'),
+        captureBtn: document.getElementById('capture-btn'),
+        capturedImage: document.getElementById('captured-image'),
+        loadingIndicator: document.getElementById('loading-indicator'),
+        analysisContent: document.getElementById('analysis-content'),
+        settingsBtn: document.getElementById('settings-btn'),
+        closeSettingsBtn: document.getElementById('close-settings-btn'),
+        backBtn: document.getElementById('back-btn'),
+        apiKeyInput: document.getElementById('api-key-input'),
+        saveKeyBtn: document.getElementById('save-key-btn'),
+        resetKeyBtn: document.getElementById('reset-key-btn'),
+        modelSelect: document.getElementById('model-select'),
+        demoBadge: document.getElementById('demo-badge'),
+        fileInput: document.getElementById('file-input'),
+        uploadBtn: document.getElementById('upload-btn'),
+        getStartedBtn: document.getElementById('get-started-btn'),
+        manualBtn: document.getElementById('manual-btn'),
+        manualInput: document.getElementById('manual-input'),
+        searchBtn: document.getElementById('search-btn'),
+        closeManualBtn: document.getElementById('close-manual-btn')
+    };
+
+    if (elements.getStartedBtn) {
+        elements.getStartedBtn.onclick = () => {
+            localStorage.setItem('saw_intro', 'true');
+            switchView('view-camera');
+        };
+    }
+
+    if (elements.captureBtn) {
+        elements.captureBtn.onclick = async () => {
+            const imageDataUrl = captureImage();
+            switchView('view-result');
+            await analyzeItem({ image: imageDataUrl });
+        };
+    }
+
+    if (elements.uploadBtn && elements.fileInput) {
+        elements.uploadBtn.onclick = () => elements.fileInput.click();
+        elements.fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    elements.capturedImage.src = event.target.result;
+                    switchView('view-result');
+                    await analyzeItem({ image: event.target.result });
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+
+    if (elements.manualBtn) elements.manualBtn.onclick = () => switchView('view-manual');
+    if (elements.closeManualBtn) elements.closeManualBtn.onclick = () => switchView('view-camera');
+    if (elements.searchBtn && elements.manualInput) {
+        elements.searchBtn.onclick = async () => {
+            const text = elements.manualInput.value.trim();
+            if (text) {
+                switchView('view-result');
+                await analyzeItem({ text: text });
+            }
+        };
+    }
+
+    if (elements.backBtn) elements.backBtn.onclick = () => switchView('view-camera');
+    if (elements.settingsBtn) elements.settingsBtn.onclick = () => switchView('view-settings');
+    if (elements.closeSettingsBtn) elements.closeSettingsBtn.onclick = () => switchView('view-camera');
+
+    if (elements.saveKeyBtn) {
+        elements.saveKeyBtn.onclick = () => {
+            const key = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
+            if (key) {
+                state.apiKey = key;
+                localStorage.setItem('gemini_api_key', key);
+                alert("API Key saved!");
+                fetchAvailableModels();
+                updateUIState();
+                switchView('view-camera');
+            }
+        };
     }
 
     if (elements.resetKeyBtn) {
-        elements.resetKeyBtn.hidden = isDemo;
-    }
-}
-
-// Init
-async function init() {
-    console.log("Initializing App...");
-
-    try {
-        // Query elements
-        views = {
-            intro: document.getElementById('view-intro'),
-            camera: document.getElementById('view-camera'),
-            result: document.getElementById('view-result'),
-            settings: document.getElementById('view-settings')
-        };
-
-        elements = {
-            video: document.getElementById('camera-feed'),
-            canvas: document.getElementById('camera-canvas'),
-            captureBtn: document.getElementById('capture-btn'),
-            capturedImage: document.getElementById('captured-image'),
-            loadingIndicator: document.getElementById('loading-indicator'),
-            analysisContent: document.getElementById('analysis-content'),
-            settingsBtn: document.getElementById('settings-btn'),
-            closeSettingsBtn: document.getElementById('close-settings-btn'),
-            backBtn: document.getElementById('back-btn'),
-            apiKeyInput: document.getElementById('api-key-input'),
-            saveKeyBtn: document.getElementById('save-key-btn'),
-            resetKeyBtn: document.getElementById('reset-key-btn'),
-            modelSelect: document.getElementById('model-select'),
-            demoBadge: document.getElementById('demo-badge'),
-            fileInput: document.getElementById('file-input'),
-            uploadBtn: document.getElementById('upload-btn'),
-            getStartedBtn: document.getElementById('get-started-btn')
-        };
-
-        console.log("Elements queried:", elements);
-
-        // Intro Logic
-        if (elements.getStartedBtn) {
-            elements.getStartedBtn.onclick = () => {
-                localStorage.setItem('saw_intro', 'true');
-                switchView('view-camera');
-            };
-        }
-
-        // Attach listeners
-        if (elements.captureBtn) {
-            elements.captureBtn.onclick = async () => {
-                console.log("Capture button clicked");
-                const imageDataUrl = captureImage();
-                switchView('view-result');
-                await analyzeImage(imageDataUrl);
-            };
-        } else {
-            console.error("Capture button not found");
-        }
-
-        // File Upload Handlers
-        if (elements.uploadBtn && elements.fileInput) {
-            elements.uploadBtn.onclick = () => {
-                elements.fileInput.click();
-            };
-
-            elements.fileInput.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = async (event) => {
-                        const imageDataUrl = event.target.result;
-
-                        // Show image in result view
-                        elements.capturedImage.src = imageDataUrl;
-
-                        switchView('view-result');
-                        await analyzeImage(imageDataUrl);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-        }
-
-        if (elements.backBtn) {
-            elements.backBtn.onclick = () => {
-                console.log("Back button clicked");
+        elements.resetKeyBtn.onclick = () => {
+            if (confirm("Reset to Demo Mode?")) {
+                localStorage.removeItem('gemini_api_key');
+                state.apiKey = CONFIG.DEFAULT_API_KEY || '';
+                fetchAvailableModels();
+                updateUIState();
                 switchView('view-camera');
             }
-        }
-
-        if (elements.settingsBtn) {
-            elements.settingsBtn.onclick = () => {
-                console.log("Settings button clicked");
-                switchView('view-settings');
-            };
-        } else {
-            console.error("Settings button not found");
-        }
-
-        if (elements.closeSettingsBtn) {
-            elements.closeSettingsBtn.onclick = () => {
-                console.log("Close settings button clicked");
-                if (state.currentView === 'view-settings') switchView('view-camera');
-            };
-        }
-
-        if (elements.saveKeyBtn) {
-            elements.saveKeyBtn.onclick = () => {
-                console.log("Save key button clicked");
-                const key = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
-
-                if (key) {
-                    // Save User Key
-                    state.apiKey = key;
-                    localStorage.setItem('gemini_api_key', key);
-                    alert("API Key saved! Switched to Custom Mode.");
-                    fetchAvailableModels();
-                    updateUIState();
-                    switchView('view-camera');
-                } else {
-                    alert("Please enter a valid key to save.");
-                }
-            };
-        }
-
-        if (elements.resetKeyBtn) {
-            elements.resetKeyBtn.onclick = () => {
-                if (confirm("Remove your custom key and switch back to Demo Mode?")) {
-                    localStorage.removeItem('gemini_api_key');
-                    state.apiKey = CONFIG.DEFAULT_API_KEY || '';
-                    alert("Switched to Demo Mode.");
-
-                    fetchAvailableModels();
-                    updateUIState();
-                    switchView('view-camera');
-                }
-            };
-        }
-
-        // Model Selection Listener
-        if (elements.modelSelect) {
-            elements.modelSelect.onchange = () => {
-                state.model = elements.modelSelect.value;
-                localStorage.setItem('gemini_model', state.model);
-                console.log("Model changed to:", state.model);
-            };
-        }
-
-        // Initial UI Update
-        updateUIState();
-
-        // Initial fetch if key exists
-        if (state.apiKey) {
-            fetchAvailableModels();
-        }
-
-        // Determine Start View
-        const sawIntro = localStorage.getItem('saw_intro');
-        if (!sawIntro) {
-            switchView('view-intro');
-        } else {
-            // Start transparently
-            switchView('view-camera');
-        }
-
-        // Expose for debugging (Sanitized)
-        const debugState = { ...state };
-        if (debugState.apiKey) {
-            debugState.apiKey = debugState.isDemoMode ? "HIDDEN_DEMO_KEY" : "HIDDEN_USER_KEY";
-        }
-
-        window.debugApp = { state: debugState, elements, views, CONFIG };
-        console.log("App initialized. Debug object available at window.debugApp");
-
-    } catch (e) {
-        console.error("Initialization error:", e);
-        alert("App initialization failed: " + e.message);
+        };
     }
+
+    if (elements.modelSelect) {
+        elements.modelSelect.onchange = () => {
+            state.model = elements.modelSelect.value;
+            localStorage.setItem('gemini_model', state.model);
+        };
+    }
+
+    updateUIState();
+    if (state.apiKey) fetchAvailableModels();
+
+    const sawIntro = localStorage.getItem('saw_intro');
+    switchView(sawIntro ? 'view-camera' : 'view-intro');
+
+    // Debug
+    const debugState = { ...state };
+    if (debugState.apiKey) debugState.apiKey = debugState.isDemoMode ? "HIDDEN_DEMO_KEY" : "HIDDEN_USER_KEY";
+    window.debugApp = { state: debugState, elements, views, CONFIG };
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log("DOMContentLoaded fired");
-        init();
-    });
-} else {
-    console.log("ReadyState is " + document.readyState);
-    init();
-}
+window.addEventListener('DOMContentLoaded', init);
