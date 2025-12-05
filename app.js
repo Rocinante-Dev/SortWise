@@ -156,8 +156,18 @@ async function analyzeItem(input) {
             STRICT RESPONSE GUIDELINES:
             1. LOCATION: Deduce specific City/Municipality.
             2. TEMPORAL AWARENESS: Be aware of current date (${dateStr}). KEY FACT: Ottawa's transition to Circular Materials is JAN 1, 2026 (NOT 2025).
-            3. ACCURACY: Define bin colors explicitly (e.g. "Black Bin (Garbage)"). Check for rules like "screw caps back on".
-            4. VERIFICATION: Provide a clickable Google Search link.
+            3. ACCURACY: You MUST cross-reference the known bin rules below if the location matches.
+               - OTTAWA RULES:
+                 * BLUE BIN: Glass, Metal, Plastics, Soft Plastics (Clean).
+                 * BLACK BIN: Paper, Cardboard.
+                 * GREEN BIN: Organics (Food, Yard Waste).
+                 * GARBAGE: Styrofoam, composite materials.
+               - TORONTO RULES:
+                 * BLUE BIN: All Recycling (Paper, Plastic, Metal, Glass).
+                 * GREEN BIN: Organics.
+                 * GARBAGE: Black Bin.
+            4. UNCERTAINTY: If location is unknown or rules unclear, say "Check Local Guidelines" instead of guessing colors.
+            5. VERIFICATION: Provide a clickable Google Search link.
 
             Format your response in Markdown:
             ### [Item Name]
@@ -176,8 +186,18 @@ async function analyzeItem(input) {
             STRICT RESPONSE GUIDELINES:
             1. LOCATION: Deduce specific City/Municipality.
             2. TEMPORAL AWARENESS: Be aware of current date (${dateStr}). KEY FACT: Ottawa's transition to Circular Materials is JAN 1, 2026 (NOT 2025).
-            3. ACCURACY: Define bin colors explicitly.
-            4. VERIFICATION: Provide a clickable Google Search link.
+            3. ACCURACY: You MUST cross-reference the known bin rules below if the location matches.
+               - OTTAWA RULES:
+                 * BLUE BIN: Glass, Metal, Plastics, Soft Plastics (Clean).
+                 * BLACK BIN: Paper, Cardboard.
+                 * GREEN BIN: Organics (Food, Yard Waste).
+                 * GARBAGE: Styrofoam, composite materials.
+               - TORONTO RULES:
+                 * BLUE BIN: All Recycling (Paper, Plastic, Metal, Glass).
+                 * GREEN BIN: Organics.
+                 * GARBAGE: Black Bin.
+            4. UNCERTAINTY: If location is unknown or rules unclear, say "Check Local Guidelines" instead of guessing colors.
+            5. VERIFICATION: Provide a clickable Google Search link.
 
             Format your response in Markdown:
             ### ${input.text}
