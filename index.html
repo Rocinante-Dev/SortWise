@@ -22,6 +22,17 @@
 </head>
 
 <body>
+    <script>
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            alert("Global Error: " + msg + "\nURL: " + url + "\nLine: " + lineNo);
+            return false;
+        };
+        window.addEventListener('error', function (e) {
+            if (e.target.tagName === 'SCRIPT') {
+                alert("Script loading error: " + e.target.src);
+            }
+        }, true);
+    </script>
     <div id="app">
         <!-- Header -->
         <header class="app-header">
@@ -82,7 +93,7 @@
             </section>
         </main>
     </div>
-    <script type="module" src="app.js?v=4"></script>
+    <script type="module" src="app.js?v=5"></script>
 </body>
 
 </html>
