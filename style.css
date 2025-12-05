@@ -17,36 +17,6 @@
 }
 
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    font-family: var(--font-family);
-    background-color: var(--bg-color);
-    color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-#app {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    max-width: 600px;
-    margin: 0 auto;
-    width: 100%;
-    background-color: var(--bg-color);
-    position: relative;
-}
-
-/* Header */
-.app-header {
-    padding: 1rem 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -187,6 +157,7 @@ body {
 /* Results View */
 #view-result {
     padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
     overflow-y: auto;
 }
 
@@ -253,8 +224,10 @@ body {
 /* Settings View */
 #view-settings {
     padding: 1.5rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
     background-color: var(--bg-color);
     z-index: 20;
+    overflow-y: auto;
 }
 
 .controls {
@@ -433,6 +406,7 @@ body {
         transform: translateY(0px);
     }
 }
+
 /* Markdown Text Styles */
 .markdown-body {
     color: var(--text-primary);
