@@ -241,6 +241,7 @@ function renderMarkdown(text) {
         .replace(/^## (.*$)/gim, '<h2>$1</h2>')
         .replace(/^# (.*$)/gim, '<h1>$1</h1>')
         .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>')
         .replace(/\n/gim, '<br>');
 
     elements.analysisContent.innerHTML = html;
