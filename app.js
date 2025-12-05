@@ -297,7 +297,9 @@ async function init() {
             saveKeyBtn: document.getElementById('save-key-btn'),
             resetKeyBtn: document.getElementById('reset-key-btn'),
             modelSelect: document.getElementById('model-select'),
-            demoBadge: document.getElementById('demo-badge')
+            demoBadge: document.getElementById('demo-badge'),
+            fileInput: document.getElementById('file-input'),
+            uploadBtn: document.getElementById('upload-btn')
         };
 
         console.log("Elements queried:", elements);
@@ -312,6 +314,30 @@ async function init() {
             };
         } else {
             console.error("Capture button not found");
+        }
+
+        // File Upload Handlers
+        if (elements.uploadBtn && elements.fileInput) {
+            elements.uploadBtn.onclick = () => {
+                elements.fileInput.click();
+            };
+
+            elements.fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        const imageDataUrl = event.target.result;
+
+                        // Show image in result view
+                        elements.capturedImage.src = imageDataUrl;
+
+                        switchView('view-result');
+                        await analyzeImage(imageDataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
         }
 
         if (elements.backBtn) {
