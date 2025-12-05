@@ -1,18 +1,32 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CONFIG } from "./config.js";
+import { checkAndShowChangelog } from "./changelog.js";
 
 console.log(`App.js module loaded. Version: ${CONFIG.APP_VERSION}`);
 
 // State
 const state = {
-    apiKey: localStorage.getItem('gemini_api_key') || CONFIG.DEFAULT_API_KEY || '',
+    apiKey: localStorage.getItem('gemini_api_key') || getEnvironmentApiKey() || '',
     model: localStorage.getItem('gemini_model') || CONFIG.DEFAULT_MODEL,
     currentView: 'view-camera',
     stream: null,
     get isDemoMode() {
-        return !localStorage.getItem('gemini_api_key') && this.apiKey === CONFIG.DEFAULT_API_KEY && !!CONFIG.DEFAULT_API_KEY;
+        // Demo mode if no local key IS saved AND we are falling back to the default config key
+        const defaultKey = getEnvironmentApiKey();
+        return !localStorage.getItem('gemini_api_key') && this.apiKey === defaultKey && !!defaultKey;
     }
 };
+
+function getEnvironmentApiKey() {
+    const hostname = window.location.hostname;
+    // Simple check: localhost, 127.0.0.1, or empty (file://) is development
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '') {
+        console.log("Environment: Development");
+        return CONFIG.API_KEYS.DEV;
+    }
+    console.log("Environment: Production");
+    return CONFIG.API_KEYS.PROD;
+}
 
 // DOM Elements
 let views = {};
@@ -85,28 +99,40 @@ function captureImage() {
 
 // Location Logic
 async function getLocation() {
+    const statusEl = document.getElementById('location-status');
+    const updateStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+
     // 1. Check Manual Override first
     const manualLoc = localStorage.getItem('manual_location');
     if (manualLoc && manualLoc.trim() !== "") {
+        updateStatus("📍 Manual Override");
         return `Manual Override: ${manualLoc}`;
     }
+
+    updateStatus("🛰️ Acquiring GPS...");
 
     // 2. High-Accuracy GPS Fallback
     return new Promise((resolve) => {
         if (!navigator.geolocation) {
+            updateStatus("❌ GPS Unsupported");
             resolve("Location not supported");
             return;
         }
         navigator.geolocation.getCurrentPosition(
-            (position) => resolve(`${position.coords.latitude}, ${position.coords.longitude}`),
+            (position) => {
+                const acc = Math.round(position.coords.accuracy);
+                updateStatus(`📍 GPS (±${acc}m)`);
+                resolve(`${position.coords.latitude}, ${position.coords.longitude} (Accuracy: ${acc}m)`);
+            },
             (error) => {
                 console.warn("GPS Error:", error);
+                updateStatus("⚠️ GPS Failed");
                 resolve("Unknown Location");
             },
             {
                 enableHighAccuracy: true, // Force GPS
-                timeout: 5000,            // Wait up to 5s
-                maximumAge: 0             // Do not use cached position
+                timeout: 10000,           // Increased timeout for high accuracy
+                maximumAge: 0
             }
         );
     });
@@ -274,11 +300,18 @@ function updateUIState() {
             elements.apiKeyInput.value = "";
         } else {
             elements.apiKeyInput.placeholder = "Paste your API key here";
-            elements.apiKeyInput.value = state.apiKey === CONFIG.DEFAULT_API_KEY ? "" : state.apiKey;
+            const currentEnvKey = getEnvironmentApiKey();
+            elements.apiKeyInput.value = state.apiKey === currentEnvKey ? "" : state.apiKey;
         }
     }
-    if (elements.demoBadge) elements.demoBadge.hidden = !isDemo;
-    if (elements.resetKeyBtn) elements.resetKeyBtn.hidden = isDemo;
+
+    // Fix: Use classList for visibility to ensure CSS overrides work (display: inline-block vs none)
+    if (elements.demoBadge) elements.demoBadge.classList.toggle('hidden', !isDemo);
+
+    // Reset Button: Only show if we actually have a saved user key to remove
+    const hasUserKey = !!localStorage.getItem('gemini_api_key');
+    if (elements.resetKeyBtn) elements.resetKeyBtn.hidden = !hasUserKey; // HTML hidden attr is fine here if display block, but safer to match style
+    if (elements.resetKeyBtn) elements.resetKeyBtn.classList.toggle('hidden', !hasUserKey);
 }
 
 async function init() {
@@ -380,20 +413,21 @@ async function init() {
                 alert("API Key saved!");
                 fetchAvailableModels();
                 updateUIState();
-                switchView('view-camera');
+                // User wants to stay here to select model
+                // switchView('view-camera');
             }
         };
     }
 
     if (elements.resetKeyBtn) {
         elements.resetKeyBtn.onclick = () => {
-            if (confirm("Reset to Demo Mode?")) {
-                localStorage.removeItem('gemini_api_key');
-                state.apiKey = CONFIG.DEFAULT_API_KEY || '';
-                fetchAvailableModels();
-                updateUIState();
-                switchView('view-camera');
-            }
+            // Instant remove - no annoying popup, just do it.
+            localStorage.removeItem('gemini_api_key');
+            state.apiKey = getEnvironmentApiKey() || '';
+            fetchAvailableModels();
+            updateUIState();
+            switchView('view-camera');
+            // Show a temporary message or just the updated UI is enough
         };
     }
 
@@ -432,6 +466,9 @@ async function init() {
 
     const sawIntro = localStorage.getItem('saw_intro');
     switchView(sawIntro ? 'view-camera' : 'view-intro');
+
+    // Check for updates
+    checkAndShowChangelog(CONFIG.APP_VERSION);
 
     // Debug
     const debugState = { ...state };

@@ -78,6 +78,7 @@
                     <canvas id="camera-canvas" hidden></canvas>
                     <div class="camera-overlay">
                         <p class="hint-text">Point at an item to recycle</p>
+                        <p id="location-status" class="version-text">Locating...</p>
                         <p class="app-version version-text">v1.3.0</p>
                     </div>
                 </div>
@@ -161,7 +162,20 @@
             </section>
         </main>
     </div>
-    <script type="module" src="app.js?v=20"></script>
+    <!-- Script upgraded to v21 below -->
+    <!-- Changelog Modal -->
+    <div id="changelog-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎉 New Updates</h2>
+                <button id="close-changelog-btn" class="icon-btn">×</button>
+            </div>
+            <div id="changelog-list" class="modal-body">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+    <script type="module" src="app.js?v=21"></script>
 </body>
 
 </html>

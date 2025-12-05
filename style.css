@@ -62,6 +62,7 @@ body {
     font-size: 1.25rem;
     background: linear-gradient(to right, var(--primary-color), var(--accent-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -460,4 +461,78 @@ body {
 
 .markdown-body strong {
     color: var(--primary-color);
+}
+
+/* Changelog Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background: var(--surface-color);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 450px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.modal-body ul {
+    margin-left: 1.5rem;
+    margin-top: 1rem;
+}
+
+.modal-body li {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.modal-body h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.modal-body small {
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 1rem;
 }
