@@ -171,18 +171,24 @@ async function analyzeImage(base64Image) {
         const base64Data = base64Image.split(',')[1];
 
         const prompt = `
-        Identify this item and provide recycling instructions for location: ${location}.
+        Identify this item and provide recycling instructions for location coordinates: ${location}.
 
         STRICT RESPONSE GUIDELINES:
-        1. DIRECTNESS: Do NOT use conversational fillers (e.g., "Certainly!", "Here is..."). Start directly with the item name.
-        2. ACCURACY: If you are unsure about specific local rules for this location, state "Local rules vary" and provide general best practices. Do NOT hallucinate specific local capabilities.
-        3. VERIFICATION: Provide 1-2 search terms or links where the user can verify this (e.g., "Search [City] recycling guide" or specific URL if known).
+        1. LOCATION: First, deduce the likely City/Municipality from the provided coordinates. State this clearly.
+        2. DIRECTNESS: Start with the item name. No filler.
+        3. ACCURACY: 
+           - If the item is a **plastic cap**, the modern standard (in many places like US/Canada/UK) is often to **screw it back onto the empty bottle** so it doesn't get lost in sorting. CHECK local rules for this specific location.
+           - If suggesting a "Black Bin" or "Blue Bin", specify what that bin is for (e.g., "Black Bin (Garbage)" or "Blue Bin (Containers)") to avoid confusion, as color codes vary wildly.
+        4. VERIFICATION: You MUST provide a **clickable link** for the user to verify. 
+           - If you know the official municipal site, link it.
+           - Otherwise, generate a Google Search URL: https://www.google.com/search?q=recycling+instructions+for+${location}+[item_name]
 
         Format your response in Markdown:
         ### [Item Name]
+        **Detected Location:** [City, Region]
         **Recyclable:** [Yes/No/Check Local]
-        **Instructions:** [Concise, step-by-step disposal guide]
-        **Verify:** [Link or Search Term for local confirmation]
+        **Instructions:** [Concise, step-by-step disposal guide. Be specific about bin colors AND their purpose.]
+        **Verify:** [Link to Official Site or Google Search]
         `;
 
         const imagePart = {
