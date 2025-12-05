@@ -32,6 +32,7 @@ function getEnvironmentApiKey() {
 let views = {};
 let elements = {};
 
+
 // Navigation
 function switchView(viewName) {
     console.log(`Switching to view: ${viewName}`);
@@ -314,8 +315,7 @@ function updateUIState() {
     if (elements.resetKeyBtn) elements.resetKeyBtn.classList.toggle('hidden', !hasUserKey);
 }
 
-async function init() {
-    console.log("Initializing App...");
+function getDOMElements() {
     views = {
         intro: document.getElementById('view-intro'),
         camera: document.getElementById('view-camera'),
@@ -348,15 +348,18 @@ async function init() {
         closeManualBtn: document.getElementById('close-manual-btn'),
         locationInput: document.getElementById('location-input')
     };
+}
 
-    // Initialize app height for mobile browsers (fixes Android nav bar cutoff)
+function setupEventListeners() {
+    // Initialize app height for mobile browsers
     const setAppHeight = () => {
         const doc = document.documentElement;
         doc.style.setProperty('--app-height', `${window.innerHeight}px`);
     };
     window.addEventListener('resize', setAppHeight);
-    setAppHeight(); // Initial set
+    setAppHeight();
 
+    // Navigation & Actions
     if (elements.getStartedBtn) {
         elements.getStartedBtn.onclick = () => {
             localStorage.setItem('saw_intro', 'true');
@@ -390,6 +393,7 @@ async function init() {
 
     if (elements.manualBtn) elements.manualBtn.onclick = () => switchView('view-manual');
     if (elements.closeManualBtn) elements.closeManualBtn.onclick = () => switchView('view-camera');
+
     if (elements.searchBtn && elements.manualInput) {
         elements.searchBtn.onclick = async () => {
             const text = elements.manualInput.value.trim();
@@ -400,10 +404,12 @@ async function init() {
         };
     }
 
+    // Navigation buttons
     if (elements.backBtn) elements.backBtn.onclick = () => switchView('view-camera');
     if (elements.settingsBtn) elements.settingsBtn.onclick = () => switchView('view-settings');
     if (elements.closeSettingsBtn) elements.closeSettingsBtn.onclick = () => switchView('view-camera');
 
+    // Settings
     if (elements.saveKeyBtn) {
         elements.saveKeyBtn.onclick = () => {
             const key = elements.apiKeyInput ? elements.apiKeyInput.value.trim() : '';
@@ -413,21 +419,17 @@ async function init() {
                 alert("API Key saved!");
                 fetchAvailableModels();
                 updateUIState();
-                // User wants to stay here to select model
-                // switchView('view-camera');
             }
         };
     }
 
     if (elements.resetKeyBtn) {
         elements.resetKeyBtn.onclick = () => {
-            // Instant remove - no annoying popup, just do it.
             localStorage.removeItem('gemini_api_key');
             state.apiKey = getEnvironmentApiKey() || '';
             fetchAvailableModels();
             updateUIState();
             switchView('view-camera');
-            // Show a temporary message or just the updated UI is enough
         };
     }
 
@@ -440,26 +442,21 @@ async function init() {
 
     // Manual Location Save/Load
     if (elements.locationInput) {
-        console.log("DEBUG: locationInput element found.");
         const savedLoc = localStorage.getItem('manual_location');
-        console.log("DEBUG: Initial savedLoc:", savedLoc);
+        if (savedLoc) elements.locationInput.value = savedLoc;
 
-        if (savedLoc) {
-            elements.locationInput.value = savedLoc;
-            console.log("DEBUG: Set input value to:", savedLoc);
-        }
-
-        elements.locationInput.addEventListener('input', (e) => {
-            console.log("DEBUG: Input event:", e.target.value);
-            localStorage.setItem('manual_location', e.target.value);
-        });
-        elements.locationInput.addEventListener('change', (e) => {
-            console.log("DEBUG: Change event:", e.target.value);
-            localStorage.setItem('manual_location', e.target.value);
-        });
-    } else {
-        console.error("DEBUG: locationInput element NOT FOUND.");
+        const saveLoc = (e) => localStorage.setItem('manual_location', e.target.value);
+        elements.locationInput.addEventListener('input', saveLoc);
+        elements.locationInput.addEventListener('change', saveLoc);
     }
+}
+
+async function init() {
+    console.log("Initializing App...");
+
+    getDOMElements();
+    setupEventListeners();
+
     // Fix: Check for stale/broken demo key from old PR version and purge it
     const STALE_KEY = "AIzaSyC_MiybngCmG_DSuXZfWBOHr5d8vI8iS2E";
     if (localStorage.getItem('gemini_api_key') === STALE_KEY) {
