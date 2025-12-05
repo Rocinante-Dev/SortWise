@@ -84,7 +84,14 @@ function captureImage() {
 }
 
 // Location Logic
-function getLocation() {
+async function getLocation() {
+    // 1. Check Manual Override first
+    const manualLoc = localStorage.getItem('manual_location');
+    if (manualLoc && manualLoc.trim() !== "") {
+        return `Manual Override: ${manualLoc}`;
+    }
+
+    // 2. High-Accuracy GPS Fallback
     return new Promise((resolve) => {
         if (!navigator.geolocation) {
             resolve("Location not supported");
@@ -92,7 +99,15 @@ function getLocation() {
         }
         navigator.geolocation.getCurrentPosition(
             (position) => resolve(`${position.coords.latitude}, ${position.coords.longitude}`),
-            (error) => resolve("Unknown Location")
+            (error) => {
+                console.warn("GPS Error:", error);
+                resolve("Unknown Location");
+            },
+            {
+                enableHighAccuracy: true, // Force GPS
+                timeout: 5000,            // Wait up to 5s
+                maximumAge: 0             // Do not use cached position
+            }
         );
     });
 }
@@ -297,7 +312,8 @@ async function init() {
         manualBtn: document.getElementById('manual-btn'),
         manualInput: document.getElementById('manual-input'),
         searchBtn: document.getElementById('search-btn'),
-        closeManualBtn: document.getElementById('close-manual-btn')
+        closeManualBtn: document.getElementById('close-manual-btn'),
+        locationInput: document.getElementById('location-input')
     };
 
     // Initialize app height for mobile browsers (fixes Android nav bar cutoff)
@@ -386,6 +402,29 @@ async function init() {
             state.model = elements.modelSelect.value;
             localStorage.setItem('gemini_model', state.model);
         };
+    }
+
+    // Manual Location Save/Load
+    if (elements.locationInput) {
+        console.log("DEBUG: locationInput element found.");
+        const savedLoc = localStorage.getItem('manual_location');
+        console.log("DEBUG: Initial savedLoc:", savedLoc);
+
+        if (savedLoc) {
+            elements.locationInput.value = savedLoc;
+            console.log("DEBUG: Set input value to:", savedLoc);
+        }
+
+        elements.locationInput.addEventListener('input', (e) => {
+            console.log("DEBUG: Input event:", e.target.value);
+            localStorage.setItem('manual_location', e.target.value);
+        });
+        elements.locationInput.addEventListener('change', (e) => {
+            console.log("DEBUG: Change event:", e.target.value);
+            localStorage.setItem('manual_location', e.target.value);
+        });
+    } else {
+        console.error("DEBUG: locationInput element NOT FOUND.");
     }
 
     updateUIState();
