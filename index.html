@@ -18,79 +18,9 @@
           "@google/generative-ai": "https://esm.run/@google/generative-ai"
         }
       }
-    </script>
-</head>
-
-<body>
-    <script>
-        // Version stub for error handling
-        const APP_VERSION_STUB = "v1.2.1";
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            alert("Global Error (" + APP_VERSION_STUB + "): " + msg + "\nURL: " + url + "\nLine: " + lineNo);
-            return false;
-        };
-        window.addEventListener('error', function (e) {
-            if (e.target.tagName === 'SCRIPT') {
-                alert("Script loading error (" + APP_VERSION_STUB + "): " + e.target.src);
-            }
-        }, true);
-    </script>
-    <div id="app">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="logo">SortWise ♻️</div>
-            <button id="settings-btn" class="icon-btn" aria-label="Settings">⚙️</button>
-        </header>
-
-        <!-- Main Content -->
-        <main id="main-content">
-            <!-- Intro/Install View -->
-            <section id="view-intro" class="view">
-                <div class="intro-content">
-                    <div class="logo-large">♻️</div>
-                    <h1 style="margin-bottom: 0.5rem;">Welcome to SortWise</h1>
-                    <p class="subtitle" style="color: var(--text-secondary); margin-bottom: 2rem;">Your AI Recycling
-                        Assistant</p>
-
-                    <div class="install-guide">
-                        <h3>📱 How to Install</h3>
-                        <p>For the best experience, add this app to your home screen:</p>
-                        <div class="platform-instruction">
-                            <strong>iOS (Safari):</strong>
-                            <p>Tap Share <span style="font-size:1.2rem">⎋</span> → "Add to Home Screen" <span
-                                    style="font-size:1.2rem">⊞</span></p>
-                        </div>
-                        <div class="platform-instruction">
-                            <strong>Android (Chrome):</strong>
-                            <p>Tap Menu <span style="font-size:1.2rem">⋮</span> → "Install app" or "Add to Home screen"
-                            </p>
-                        </div>
-                    </div>
-
-                    <button id="get-started-btn" class="primary-btn" style="margin-top: 2rem;">Get Started →</button>
-                </div>
-            </section>
-
-            <!-- Home/Camera View -->
-            <section id="view-camera" class="view">
-                <div class="camera-container">
-                    <video id="camera-feed" autoplay playsinline muted></video>
-                    <canvas id="camera-canvas" hidden></canvas>
-                    <div class="camera-overlay">
-                        <p class="hint-text">Point at an item to recycle</p>
-                        <p class="app-version version-text">v1.2.1</p>
-                    </div>
-                </div>
-                <div class="controls">
                     <button id="capture-btn" class="capture-btn" aria-label="Take Picture"></button>
-                    <div class="secondary-controls"
-                        style="display: flex; gap: 1rem; align-items: center; justify-content: center; margin-top: 1rem;">
-                        <input type="file" id="file-input" accept="image/*" hidden>
-                        <button id="upload-btn" class="icon-btn secondary-action" aria-label="Upload Image"
-                            style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">📁</button>
-                        <button id="manual-btn" class="icon-btn secondary-action" aria-label="Type Item"
-                            style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">⌨️</button>
-                    </div>
+                    <button id="manual-btn" class="icon-btn secondary-action" aria-label="Type Item"
+                        style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); width: 50px; height: 50px; font-size: 1.5rem;">⌨️</button>
                 </div>
             </section>
 
@@ -158,7 +88,7 @@
             </section>
         </main>
     </div>
-    <script type="module" src="app.js?v=7"></script>
-</body>
+    <script type="module" src="app.js?v=8"></script>
+    </body>
 
 </html>
