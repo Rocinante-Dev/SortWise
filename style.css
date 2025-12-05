@@ -268,7 +268,34 @@ body {
     padding-bottom: 1rem;
 }
 
-font-family: inherit;
+.settings-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    min-height: 40px;
+}
+
+#close-settings-btn {
+    position: absolute;
+    left: 0;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.settings-form input {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--surface-color);
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
 }
 
 .settings-form input:focus {
