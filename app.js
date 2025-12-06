@@ -99,6 +99,9 @@ function captureImage() {
 }
 
 // Location Logic
+// Location Logic
+let hasPromptedForManualLocation = false;
+
 async function getLocation() {
     const statusEl = document.getElementById('location-status');
     const updateStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
@@ -119,20 +122,35 @@ async function getLocation() {
             resolve("Location not supported");
             return;
         }
+
+        const handleGpsError = (error) => {
+            console.warn("GPS Error:", error);
+            updateStatus("⚠️ GPS Failed");
+
+            // Prompt for manual location if we haven't already and there is no manual location set
+            if (!localStorage.getItem('manual_location') && !hasPromptedForManualLocation) {
+                hasPromptedForManualLocation = true;
+                setTimeout(() => {
+                    const proceed = confirm("GPS location could not be detected. Would you like to enter your city manually to ensure accurate recycling rules?");
+                    if (proceed) {
+                        switchView('view-settings');
+                        if (elements.locationInput) elements.locationInput.focus();
+                    }
+                }, 500);
+            }
+            resolve("Unknown Location");
+        };
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const acc = Math.round(position.coords.accuracy);
                 updateStatus(`📍 GPS (±${acc}m)`);
                 resolve(`${position.coords.latitude}, ${position.coords.longitude} (Accuracy: ${acc}m)`);
             },
-            (error) => {
-                console.warn("GPS Error:", error);
-                updateStatus("⚠️ GPS Failed");
-                resolve("Unknown Location");
-            },
+            handleGpsError,
             {
-                enableHighAccuracy: true, // Force GPS
-                timeout: 10000,           // Increased timeout for high accuracy
+                enableHighAccuracy: true,
+                timeout: 8000,
                 maximumAge: 0
             }
         );
@@ -468,6 +486,9 @@ async function init() {
 
     updateUIState();
     if (state.apiKey) fetchAvailableModels();
+
+    // Start fetching location immediately for UI status
+    getLocation();
 
     const sawIntro = localStorage.getItem('saw_intro');
     switchView(sawIntro ? 'view-camera' : 'view-intro');
