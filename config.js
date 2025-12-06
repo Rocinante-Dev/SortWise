@@ -1,7 +1,7 @@
 // config.js
 export const CONFIG = {
     APP_NAME: "SortWise",
-    APP_VERSION: "v1.3.1",
+    APP_VERSION: "v1.3.3",
     // API Keys for different environments
     API_KEYS: {
         // Local Development: Keep empty in code! Set via App Settings (saved to LocalStorage) to keep it off GitHub.
