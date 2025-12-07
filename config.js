@@ -1,7 +1,7 @@
 // config.js
 export const CONFIG = {
     APP_NAME: "SortWise",
-    APP_VERSION: "v1.3.3",
+    APP_VERSION: "v1.3.4",
     // API Keys for different environments
     API_KEYS: {
         // Local Development: Keep empty in code! Set via App Settings (saved to LocalStorage) to keep it off GitHub.
@@ -10,5 +10,6 @@ export const CONFIG = {
         PROD: "AIzaSyDzTAl2z3wSNEIvlAdG2XPT7wNqPwyo4Cs"
     },
     DEFAULT_MODEL: "gemini-2.5-pro",
-    FALLBACK_MODEL: "gemini-2.5-flash"
+    FALLBACK_MODEL: "gemini-2.5-flash",
+    SHARED_USAGE_LIMIT: 5
 };

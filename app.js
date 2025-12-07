@@ -196,6 +196,18 @@ async function analyzeItem(input) {
         return;
     }
 
+    // Check Usage Limit for Free Users
+    const hasUserKey = !!localStorage.getItem('gemini_api_key');
+    if (!hasUserKey) {
+        let usageCount = parseInt(localStorage.getItem('free_usage_count') || '0');
+        if (usageCount >= CONFIG.SHARED_USAGE_LIMIT) {
+            document.getElementById('limit-modal').classList.add('active');
+            return;
+        }
+        localStorage.setItem('free_usage_count', (usageCount + 1).toString());
+        console.log(`Free usage: ${usageCount + 1}/${CONFIG.SHARED_USAGE_LIMIT}`);
+    }
+
     elements.loadingIndicator.classList.remove('hidden');
     elements.analysisContent.innerHTML = '';
     const dateStr = new Date().toLocaleDateString();
@@ -364,7 +376,11 @@ function getDOMElements() {
         manualInput: document.getElementById('manual-input'),
         searchBtn: document.getElementById('search-btn'),
         closeManualBtn: document.getElementById('close-manual-btn'),
-        locationInput: document.getElementById('location-input')
+        locationInput: document.getElementById('location-input'),
+        // Limit Modal
+        limitModal: document.getElementById('limit-modal'),
+        modalKeyInput: document.getElementById('modal-key-input'),
+        saveModalKeyBtn: document.getElementById('save-modal-key-btn')
     };
 }
 
@@ -455,6 +471,24 @@ function setupEventListeners() {
         elements.modelSelect.onchange = () => {
             state.model = elements.modelSelect.value;
             localStorage.setItem('gemini_model', state.model);
+        };
+    }
+
+    // Limit Modal Actions
+    if (elements.saveModalKeyBtn && elements.modalKeyInput) {
+        elements.saveModalKeyBtn.onclick = () => {
+            const key = elements.modalKeyInput.value.trim();
+            if (key) {
+                state.apiKey = key;
+                localStorage.setItem('gemini_api_key', key);
+                alert("Key saved! You have unlimited access. Try your scan again.");
+                if (elements.apiKeyInput) elements.apiKeyInput.value = key; // specific fix
+                fetchAvailableModels();
+                updateUIState();
+                elements.limitModal.classList.remove('active');
+            } else {
+                alert("Please paste a valid key.");
+            }
         };
     }
 
